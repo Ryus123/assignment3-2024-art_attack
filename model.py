@@ -10,7 +10,8 @@ import torch.optim as optim
 import torch.utils.data
 import torchvision.transforms as transforms
 
-
+from utils_ADV import train_adversarial_model
+from utils_BAT import train_boosted_adversarial_model, test_BAT
 
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
@@ -26,20 +27,60 @@ class Net(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+        # Layer 1
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding='same')
+        self.bn1 = nn.BatchNorm2d(32)
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding='same')
+        self.bn2 = nn.BatchNorm2d(32)
+        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2))
+        self.dropout1 = nn.Dropout(0.25)
+        
+        # Layer 2
+        self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding='same')
+        self.bn3 = nn.BatchNorm2d(64)
+        self.conv4 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding='same')
+        self.bn4 = nn.BatchNorm2d(64)
+        self.pool2 = nn.MaxPool2d(kernel_size=(2, 2))
+        self.dropout2 = nn.Dropout(0.25)
+        
+        # Layer 3
+        self.conv5 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding='same')
+        self.bn5 = nn.BatchNorm2d(128)
+        self.conv6 = nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding='same')
+        self.bn6 = nn.BatchNorm2d(128)
+        self.pool3 = nn.MaxPool2d(kernel_size=(2, 2))
+        self.dropout3 = nn.Dropout(0.25)
+        
+        # Fully connected layers
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(128 * (33 // 8) * (33 // 8), 128)  # Adjust input size based on pooling
+        self.dropout4 = nn.Dropout(0.25)
+        self.fc2 = nn.Linear(128, 10)
         
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = torch.flatten(x, 1)
+        # Layer 1
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = self.pool1(x)
+        x = self.dropout1(x)
+        
+        # Layer 2
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = F.relu(self.bn4(self.conv4(x)))
+        x = self.pool2(x)
+        x = self.dropout2(x)
+        
+        # Layer 3
+        x = F.relu(self.bn5(self.conv5(x)))
+        x = F.relu(self.bn6(self.conv6(x)))
+        x = self.pool3(x)
+        x = self.dropout3(x)
+        
+        # Fully connected layers
+        x = self.flatten(x)
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        x = self.dropout4(x)
+        x = self.fc2(x)
         x = F.log_softmax(x, dim=1)
         return x
 
@@ -51,7 +92,7 @@ class Net(nn.Module):
         self.load_state_dict(torch.load(model_file, map_location=torch.device(device)))
 
         
-    def load_for_testing(self, project_dir='./'):
+    def load_for_testing(self, project_dir='./', model_file = model_file):
         '''This function will be called automatically before testing your
            project, and will load the model weights from the file
            specify in Net.model_file.
@@ -61,7 +102,7 @@ class Net(nn.Module):
            beware that paths of files used in this function should be
            refered relative to the root of your project directory.
         '''        
-        self.load(os.path.join(project_dir, Net.model_file))
+        self.load(os.path.join(project_dir, model_file))
 
 
 
@@ -96,6 +137,7 @@ def train_model(net, train_loader, pth_filename, num_epochs):
 
     net.save(pth_filename)
     print('Model saved in {}'.format(pth_filename))
+
 
 def test_natural(net, test_loader):
     '''Basic testing function.'''
@@ -133,109 +175,6 @@ def get_validation_loader(dataset, valid_size=1024, batch_size=32):
 
     return valid
 
-def fgsm_attack(model, loss_fn, images, labels, epsilon):
-
-    images = images.clone().detach().to(device).requires_grad_(True)
-    labels = labels.to(device)
-
-    # Forward pass
-    outputs = model(images)
-    loss = loss_fn(outputs, labels)
-
-    # Backward pass
-    model.zero_grad()
-    loss.backward()
-
-    # Gradients
-    grad = images.grad.data
-
-    # Generate perturbed image 
-    perturbed_images = images + epsilon * grad.sign()
-
-    # Clamp the perturbed images to [-1,1] since we normalized the images
-    perturbed_images = torch.clamp(perturbed_images, -1, 1)
-
-    return perturbed_images
-
-def pgd_attack(model, loss_fn, images, labels, epsilon, alpha, num_iter):
-
-    images = images.clone().detach().to(device)
-    labels = labels.to(device)
-    original_images = images.clone().detach()
-
-    for _ in range(num_iter):
-        images.requires_grad = True
-
-        # Forward pass
-        outputs = model(images)
-        loss = loss_fn(outputs, labels)
-
-        # Backward pass
-        model.zero_grad()
-        loss.backward()
-
-        # Gradients
-        grad = images.grad.data
-
-        # Update the images
-        adv_images = images + alpha * grad.sign()
-
-        # Clamp perturbation
-        eta = torch.clamp(adv_images - original_images, min=-epsilon, max=epsilon)
-        images = torch.clamp(original_images + eta, min=-1, max=1).detach()
-
-    return images
-
-def train_adversarial_model(net, train_loader, pth_filename, num_epochs, train_on_both=True):
-    '''Adversarial training function'''
-    print("Starting adversarial training")
-    criterion = nn.NLLLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-
-    
-    for epoch in range(num_epochs):
-        net.train()
-        running_loss = 0.0
-        for i, (images, labels) in enumerate(train_loader):
-            images = images.to(device)
-            labels = labels.to(device)
-
-            # Generate adversarial examples using the specified attack method
-            images_adv = pgd_attack(net, criterion, images, labels, epsilon=0.1, alpha=0.01, num_iter=5)
-
-            if train_on_both:
-                # Combine clean and adversarial examples
-                images_combined = torch.cat((images, images_adv), 0)
-                labels_combined = torch.cat((labels, labels), 0)
-            else:
-                # Train only on adversarial examples
-                images_combined = images_adv
-                labels_combined = labels
-
-            # Zero the parameter gradients
-            optimizer.zero_grad()
-
-            # Forward pass
-            outputs = net(images_combined)
-            loss = criterion(outputs, labels_combined)
-
-            # Backward and optimize
-            loss.backward()
-            optimizer.step()
-
-
-            # print statistics
-            running_loss += loss.item()
-            if i % 500 == 499:    # print every 2000 mini-batches
-                print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / 2000))
-                running_loss = 0.0
-
-    # Save the trained model
-    torch.save(net.state_dict(), pth_filename)
-    print('Model saved in {}'.format(pth_filename))
-
-
 
 def main():
 
@@ -267,7 +206,8 @@ def main():
         cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=train_transform)
         train_loader = get_train_loader(cifar, valid_size, batch_size=batch_size)
         # train_model(net, train_loader, args.model_file, args.num_epochs)
-        train_adversarial_model(net, train_loader, args.model_file, args.num_epochs)
+        train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
+         
         print("Model save to '{}'.".format(args.model_file))
 
     #### Model testing
@@ -278,10 +218,27 @@ def main():
     # during final testing.
     cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=transforms.ToTensor()) 
     valid_loader = get_validation_loader(cifar, valid_size)
-
     net.load(args.model_file)
+    
+    # Train Boosted Adversarial Training
+    h2 = Net()
+    h2.to(device)
+    if not os.path.exists("models/default_model_c2.pth") or args.force_train:
+        print("Training Boosted Adversarial model")
+        print("models/default_model_c2.pth")
 
-    acc = test_natural(net, valid_loader)
+        train_transform = transforms.Compose([transforms.ToTensor()]) 
+        cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=train_transform)
+        train_loader = get_train_loader(cifar, valid_size, batch_size=batch_size)
+        train_boosted_adversarial_model(net, h2, train_loader, "models/default_model_c2.pth", args.num_epochs, device)
+        
+    h2.load("models/default_model_c2.pth")
+    
+    
+    # acc = test_natural(net, valid_loader)
+    # Test BAT algorithm
+    acc = test_BAT(net, h2, valid_loader, device, alpha=0.2)
+    
     print("Model natural accuracy (valid): {}".format(acc))
 
     if args.model_file != Net.model_file:
