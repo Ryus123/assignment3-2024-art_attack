@@ -80,7 +80,7 @@ def main():
     valid_loader = get_validation_loader(cifar, batch_size=args.batch_size)
 
     # acc_nat = test_natural(net, valid_loader, num_samples = args.num_samples)
-    acc_nat = test_BAT(net, h2, valid_loader, device, alpha=0.18)
+    acc_nat = test_BAT(net, h2, valid_loader, device, alpha=0.14)
 
     print("Model nat accuracy (test): {}".format(acc_nat))
 
