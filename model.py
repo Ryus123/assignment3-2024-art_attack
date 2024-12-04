@@ -12,7 +12,7 @@ import torchvision.transforms as transforms
 
 from utils_ADV import train_adversarial_model
 from utils_BAT import train_boosted_adversarial_model, test_BAT
-
+from utils_deepfool import deepfool_train_adversarial_model, test_deepfool
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 
@@ -176,6 +176,7 @@ def get_validation_loader(dataset, valid_size=1024, batch_size=32):
     return valid
 
 
+
 def main():
 
     #### Parse command line arguments 
@@ -196,57 +197,42 @@ def main():
     #### Create model and move it to whatever device is available (gpu/cpu)
     net = Net()
     net.to(device)
+    model_filename = 'models/default_model_deepfool.pth'
 
     #### Model training (if necessary)
-    if not os.path.exists(args.model_file) or args.force_train:
+    if not os.path.exists(model_filename) or args.force_train:
         print("Training model")
-        print(args.model_file)
+        print(model_filename)
 
         train_transform = transforms.Compose([transforms.ToTensor()]) 
         cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=train_transform)
         train_loader = get_train_loader(cifar, valid_size, batch_size=batch_size)
-        # train_model(net, train_loader, args.model_file, args.num_epochs)
-        train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
-         
-        print("Model save to '{}'.".format(args.model_file))
+        # train_model(net, train_loader, model_filename, args.num_epochs)
+        # train_adversarial_model(net, train_loader, model_filename, args.num_epochs)
+        deepfool_train_adversarial_model(net, train_loader, model_filename, args.num_epochs, device)
+        
+        print("Model save to '{}'.".format(model_filename))
 
     #### Model testing
-    print("Testing with model from '{}'. ".format(args.model_file))
+    print("Testing with model from '{}'. ".format(model_filename))
 
     # Note: You should not change the transform applied to the
     # validation dataset since, it will be the only transform used
     # during final testing.
     cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=transforms.ToTensor()) 
     valid_loader = get_validation_loader(cifar, valid_size)
-    net.load(args.model_file)
-    
-    # Train Boosted Adversarial Training
-    h2 = Net()
-    h2.to(device)
-    if not os.path.exists("models/default_model_c2.pth") or args.force_train:
-        print("Training Boosted Adversarial model")
-        print("models/default_model_c2.pth")
 
-        train_transform = transforms.Compose([transforms.ToTensor()]) 
-        cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=train_transform)
-        train_loader = get_train_loader(cifar, valid_size, batch_size=batch_size)
-        train_boosted_adversarial_model(net, h2, train_loader, "models/default_model_c2.pth", args.num_epochs, device)
-        
-    h2.load("models/default_model_c2.pth")
-    
-    
+    net.load(model_filename)
+
     # acc = test_natural(net, valid_loader)
-    # Test BAT algorithm
-    acc = test_BAT(net, h2, valid_loader, device, alpha=0.2)
-    
+    acc = test_deepfool(net, valid_loader, device)
     print("Model natural accuracy (valid): {}".format(acc))
 
-    if args.model_file != Net.model_file:
+    if model_filename != Net.model_file:
         print("Warning: '{0}' is not the default model file, "\
               "it will not be the one used for testing your project. "\
               "If this is your best model, "\
-              "you should rename/link '{0}' to '{1}'.".format(args.model_file, Net.model_file))
+              "you should rename/link '{0}' to '{1}'.".format(model_filename, Net.model_file))
 
 if __name__ == "__main__":
     main()
-
