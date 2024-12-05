@@ -151,9 +151,6 @@ def visualize_images(images, labels, preds, title):
         axs[i].set_title(f'{title}\nTrue: {classes[labels[i]]}\nPred: {classes[preds[i]]}')
         axs[i].axis('off')
     plt.show(block=False)
-    # plt.pause(3)  # Pause to display the plot for 3 seconds
-    # plt.close()
-
 
 def test_deepfool(model, testloader, device):
     correct = 0
@@ -175,15 +172,15 @@ def test_deepfool(model, testloader, device):
         correct += (preds_perturbed == labels).sum().item()
         total += labels.size(0)
 
-        if batch_idx == 0:
-            images_to_show = images[:5].cpu()
-            adv_to_show = adv_images[:5].detach().cpu()
-            labels_to_show = labels[:5].cpu().numpy()
-            preds_to_show = preds[:5].cpu().numpy()
-            preds_perturbed_to_show = preds_perturbed[:5].cpu().numpy()
+        # if batch_idx == 0:
+        #     images_to_show = images[:5].cpu()
+        #     adv_to_show = adv_images[:5].detach().cpu()
+        #     labels_to_show = labels[:5].cpu().numpy()
+        #     preds_to_show = preds[:5].cpu().numpy()
+        #     preds_perturbed_to_show = preds_perturbed[:5].cpu().numpy()
 
-            visualize_images(images_to_show, labels_to_show, preds_to_show, title="Original Images")
-            visualize_images(adv_to_show, labels_to_show, preds_perturbed_to_show, title="Adversarial Images")
+        #     visualize_images(images_to_show, labels_to_show, preds_to_show, title="Original Images")
+        #     visualize_images(adv_to_show, labels_to_show, preds_perturbed_to_show, title="Adversarial Images")
 
     acc = 100 * correct / total
     return acc
