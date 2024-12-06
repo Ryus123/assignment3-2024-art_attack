@@ -10,9 +10,7 @@ import torch.optim as optim
 import torch.utils.data
 import torchvision.transforms as transforms
 
-from utils_ADV import train_adversarial_model
-from utils_BAT import train_boosted_adversarial_model, test_BAT
-from utils_deepfool import deepfool_train_adversarial_model, test_deepfool
+from utils_deepfool import deepfool_train_adversarial_model
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 
@@ -197,24 +195,25 @@ def main():
     #### Create model and move it to whatever device is available (gpu/cpu)
     net = Net()
     net.to(device)
-    model_filename = 'models/default_model_deepfool.pth'
+    
 
     #### Model training (if necessary)
-    if not os.path.exists(model_filename) or args.force_train:
+    # 'models/default_model_deepfool.pth'
+    if not os.path.exists(args.model_file) or args.force_train:
         print("Training model")
-        print(model_filename)
+        print(args.model_file)
 
         train_transform = transforms.Compose([transforms.ToTensor()]) 
         cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=train_transform)
         train_loader = get_train_loader(cifar, valid_size, batch_size=batch_size)
-        # train_model(net, train_loader, model_filename, args.num_epochs)
-        # train_adversarial_model(net, train_loader, model_filename, args.num_epochs)
-        deepfool_train_adversarial_model(net, train_loader, model_filename, args.num_epochs, device)
+        # train_model(net, train_loader, args.model_file, args.num_epochs)
+        # train_adversarial_model(net, train_loader, args.model_file, args.num_epochs)
+        deepfool_train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
         
-        print("Model save to '{}'.".format(model_filename))
+        print("Model save to '{}'.".format(args.model_file))
 
     #### Model testing
-    print("Testing with model from '{}'. ".format(model_filename))
+    print("Testing with model from '{}'. ".format(args.model_file))
 
     # Note: You should not change the transform applied to the
     # validation dataset since, it will be the only transform used
@@ -222,17 +221,17 @@ def main():
     cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=transforms.ToTensor()) 
     valid_loader = get_validation_loader(cifar, valid_size)
 
-    net.load(model_filename)
+    net.load(args.model_file)
 
-    # acc = test_natural(net, valid_loader)
-    acc = test_deepfool(net, valid_loader, device)
+    acc = test_natural(net, valid_loader)
+    # acc = test_deepfool(net, valid_loader, device)
     print("Model natural accuracy (valid): {}".format(acc))
 
-    if model_filename != Net.model_file:
+    if args.model_file != Net.model_file:
         print("Warning: '{0}' is not the default model file, "\
               "it will not be the one used for testing your project. "\
               "If this is your best model, "\
-              "you should rename/link '{0}' to '{1}'.".format(model_filename, Net.model_file))
+              "you should rename/link '{0}' to '{1}'.".format(args.model_file, Net.model_file))
 
 if __name__ == "__main__":
     main()

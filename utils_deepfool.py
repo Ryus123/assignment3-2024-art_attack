@@ -10,8 +10,6 @@ import torch.optim as optim
 import torch.utils.data
 import torchvision.transforms as transforms
 
-import matplotlib.pyplot as plt
-
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 
@@ -56,7 +54,6 @@ def deepfool_attack(model, images, labels, device, num_classes=10, overshoot=0.0
                 w_k = grad_k - grad_original
                 f_k = outputs[0, k] - outputs[0, original_label]
                 
-                # Project perturbation
                 perturb = abs(f_k) / (torch.norm(w_k.flatten()) + 1e-8)
                 
                 if perturb < min_perturb:
@@ -82,7 +79,7 @@ def deepfool_train_adversarial_model(net, train_loader, pth_filename, num_epochs
     Enhanced adversarial training function using DeepFool attack
     
     Args:
-    - net: Neural network model
+    - net: CNN
     - train_loader: DataLoader for training data
     - pth_filename: Path to save the trained model
     - num_epochs: Number of training epochs
@@ -135,56 +132,3 @@ def deepfool_train_adversarial_model(net, train_loader, pth_filename, num_epochs
     # Save the trained model
     torch.save(net.state_dict(), pth_filename)
     print(f'Model saved in {pth_filename}')
-
-#  unnormalize and convert tensor to numpy array for visualization
-def imshow(img):
-    img = img / 2 + 0.5  # unnormalize
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.axis('off')
-
-classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-def visualize_images(images, labels, preds, title):
-    fig, axs = plt.subplots(1, len(images), figsize=(15, 5))
-    for i in range(len(images)):
-        axs[i].imshow(np.transpose(images[i], (1, 2, 0)))
-        axs[i].set_title(f'{title}\nTrue: {classes[labels[i]]}\nPred: {classes[preds[i]]}')
-        axs[i].axis('off')
-    plt.show(block=False)
-    # plt.pause(3)  # Pause to display the plot for 3 seconds
-    # plt.close()
-
-
-def test_deepfool(model, testloader, device):
-    correct = 0
-    total = 0
-    for batch_idx, (images, labels) in enumerate(testloader):
-        images, labels = images.to(device), labels.to(device)
-
-        # Get the original prediction
-        outputs = model(images)
-        _, preds = torch.max(outputs, 1)
-
-        # Apply DeepFool attack
-        adv_images = deepfool_attack(model, images, labels, device)
-
-        # Get the perturbed prediction
-        outputs_perturbed = model(adv_images)
-        _, preds_perturbed = torch.max(outputs_perturbed, 1)
-
-        correct += (preds_perturbed == labels).sum().item()
-        total += labels.size(0)
-
-        if batch_idx == 0:
-            images_to_show = images[:5].cpu()
-            adv_to_show = adv_images[:5].detach().cpu()
-            labels_to_show = labels[:5].cpu().numpy()
-            preds_to_show = preds[:5].cpu().numpy()
-            preds_perturbed_to_show = preds_perturbed[:5].cpu().numpy()
-
-            visualize_images(images_to_show, labels_to_show, preds_to_show, title="Original Images")
-            visualize_images(adv_to_show, labels_to_show, preds_perturbed_to_show, title="Adversarial Images")
-
-    acc = 100 * correct / total
-    return acc
-

@@ -6,7 +6,6 @@ import importlib
 import importlib.abc
 import torch, torchvision
 import torchvision.transforms as transforms
-from utils_deepfool import test_deepfool
 
 torch.seed()
 use_cuda = torch.cuda.is_available()
@@ -71,8 +70,7 @@ def main():
     cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=transform)
     valid_loader = get_validation_loader(cifar, batch_size=args.batch_size)
 
-    # acc_nat = test_natural(net, valid_loader, num_samples = args.num_samples)
-    acc_nat = test_deepfool(net, valid_loader, device)
+    acc_nat = test_natural(net, valid_loader, num_samples = args.num_samples)
     print("Model nat accuracy (test): {}".format(acc_nat))
 
 if __name__ == "__main__":
