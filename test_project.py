@@ -7,6 +7,8 @@ import importlib.abc
 import torch, torchvision
 import torchvision.transforms as transforms
 
+from utils_BAT import test_BAT
+
 torch.seed()
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
@@ -51,6 +53,7 @@ def get_validation_loader(dataset, valid_size=1024, batch_size=32):
     return valid
 
 def main():
+
     parser = argparse.ArgumentParser()
     parser.add_argument("project_dir", metavar="project-dir", nargs="?", default=os.getcwd(),
                         help="Path to the project directory to test.")
@@ -64,13 +67,21 @@ def main():
 
     net = project_module.Net()
     net.to(device)
-    net.load_for_testing(project_dir=args.project_dir, model_file='models/default_model_deepfool.pth')
+    net.load_for_testing(project_dir=args.project_dir)
+    
+    h2 = project_module.Net()
+    h2.to(device)
+    h2.load_for_testing(project_dir=args.project_dir, model_file = "models/default_model_c2.pth")
+    
+    
 
     transform = transforms.Compose([transforms.ToTensor()])
     cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=transform)
     valid_loader = get_validation_loader(cifar, batch_size=args.batch_size)
 
-    acc_nat = test_natural(net, valid_loader, num_samples = args.num_samples)
+    # acc_nat = test_natural(net, valid_loader, num_samples = args.num_samples)
+    acc_nat = test_BAT(net, h2, valid_loader, device, alpha=0.14)
+
     print("Model nat accuracy (test): {}".format(acc_nat))
 
 if __name__ == "__main__":
