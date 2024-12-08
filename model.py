@@ -10,6 +10,7 @@ import torch.optim as optim
 import torch.utils.data
 import torchvision.transforms as transforms
 
+from utils_deepfool import deepfool_train_adversarial_model
 from utils_ADV import train_adversarial_model
 from utils_BAT import train_boosted_adversarial_model, test_BAT
 
@@ -197,6 +198,7 @@ def main():
     net = Net()
     net.to(device)
 
+
     #### Model training (if necessary)
     if not os.path.exists(args.model_file) or args.force_train:
         print("Training model")
@@ -206,7 +208,11 @@ def main():
         cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=train_transform)
         train_loader = get_train_loader(cifar, valid_size, batch_size=batch_size)
         # train_model(net, train_loader, args.model_file, args.num_epochs)
-        train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
+
+        deepfool_train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
+        
+        # train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
+
          
         print("Model save to '{}'.".format(args.model_file))
 
@@ -221,23 +227,33 @@ def main():
     net.load(args.model_file)
     
     # Train Boosted Adversarial Training
-    h2 = Net()
-    h2.to(device)
-    if not os.path.exists("models/default_model_c2.pth") or args.force_train:
-        print("Training Boosted Adversarial model")
-        print("models/default_model_c2.pth")
 
-        train_transform = transforms.Compose([transforms.ToTensor()]) 
-        cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=train_transform)
-        train_loader = get_train_loader(cifar, valid_size, batch_size=batch_size)
-        train_boosted_adversarial_model(net, h2, train_loader, "models/default_model_c2.pth", args.num_epochs, device)
+    # h2 = Net()
+    # h2.to(device)
+    # if not os.path.exists("models/default_model_c2.pth") or args.force_train:
+    #     print("Training Boosted Adversarial model")
+    #     print("models/default_model_c2.pth")
+
+    # net.load(args.model_file)
+
+    acc = test_natural(net, valid_loader)
+    # acc = test_deepfool(net, valid_loader, device)
+
+
+        # train_transform = transforms.Compose([transforms.ToTensor()]) 
+        # cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=train_transform)
+        # train_loader = get_train_loader(cifar, valid_size, batch_size=batch_size)
+        # train_boosted_adversarial_model(net, h2, train_loader, "models/default_model_c2.pth", args.num_epochs, device)
         
-    h2.load("models/default_model_c2.pth")
+    # h2.load("models/default_model_c2.pth")
+
     
     
     # acc = test_natural(net, valid_loader)
     # Test BAT algorithm
-    acc = test_BAT(net, h2, valid_loader, device, alpha=0.2)
+
+    # acc = test_BAT(net, h2, valid_loader, device, alpha=0.2)
+
     
     print("Model natural accuracy (valid): {}".format(acc))
 

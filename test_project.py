@@ -67,20 +67,23 @@ def main():
 
     net = project_module.Net()
     net.to(device)
-    net.load_for_testing(project_dir=args.project_dir)
+
+    # net.load_for_testing(project_dir=args.project_dir)
+    net.load_for_testing(project_dir=args.project_dir, model_file='models/default_model_deepfool.pth')
     
-    h2 = project_module.Net()
-    h2.to(device)
-    h2.load_for_testing(project_dir=args.project_dir, model_file = "models/default_model_c2.pth")
-    
+    # h2 = project_module.Net()
+    # h2.to(device)
+    # h2.load_for_testing(project_dir=args.project_dir, model_file = "models/default_model_c2.pth")
+
     
 
     transform = transforms.Compose([transforms.ToTensor()])
     cifar = torchvision.datasets.CIFAR10('./data/', download=True, transform=transform)
     valid_loader = get_validation_loader(cifar, batch_size=args.batch_size)
 
-    # acc_nat = test_natural(net, valid_loader, num_samples = args.num_samples)
-    acc_nat = test_BAT(net, h2, valid_loader, device, alpha=0.14)
+    acc_nat = test_natural(net, valid_loader, num_samples = args.num_samples)
+    # acc_nat = test_BAT(net, h2, valid_loader, device, alpha=0.14)
+
 
     print("Model nat accuracy (test): {}".format(acc_nat))
 
