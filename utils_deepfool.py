@@ -132,3 +132,4 @@ def deepfool_train_adversarial_model(net, train_loader, pth_filename, num_epochs
     # Save the trained model
     torch.save(net.state_dict(), pth_filename)
     print(f'Model saved in {pth_filename}')
+

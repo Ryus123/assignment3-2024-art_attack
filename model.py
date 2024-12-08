@@ -212,6 +212,7 @@ def main():
         deepfool_train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
         
         # train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
+
          
         print("Model save to '{}'.".format(args.model_file))
 
@@ -226,6 +227,7 @@ def main():
     net.load(args.model_file)
     
     # Train Boosted Adversarial Training
+
     # h2 = Net()
     # h2.to(device)
     # if not os.path.exists("models/default_model_c2.pth") or args.force_train:
@@ -244,11 +246,14 @@ def main():
         # train_boosted_adversarial_model(net, h2, train_loader, "models/default_model_c2.pth", args.num_epochs, device)
         
     # h2.load("models/default_model_c2.pth")
+
     
     
     # acc = test_natural(net, valid_loader)
     # Test BAT algorithm
+
     # acc = test_BAT(net, h2, valid_loader, device, alpha=0.2)
+
     
     print("Model natural accuracy (valid): {}".format(acc))
 
