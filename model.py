@@ -209,9 +209,9 @@ def main():
         train_loader = get_train_loader(cifar, valid_size, batch_size=batch_size)
         # train_model(net, train_loader, args.model_file, args.num_epochs)
 
-        # deepfool_train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
+        deepfool_train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
         
-        train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
+        # train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
          
         print("Model save to '{}'.".format(args.model_file))
 
@@ -226,13 +226,13 @@ def main():
     net.load(args.model_file)
     
     # Train Boosted Adversarial Training
-    h2 = Net()
-    h2.to(device)
-    if not os.path.exists("models/default_model_c2.pth") or args.force_train:
-        print("Training Boosted Adversarial model")
-        print("models/default_model_c2.pth")
+    # h2 = Net()
+    # h2.to(device)
+    # if not os.path.exists("models/default_model_c2.pth") or args.force_train:
+    #     print("Training Boosted Adversarial model")
+    #     print("models/default_model_c2.pth")
 
-    net.load(args.model_file)
+    # net.load(args.model_file)
 
     acc = test_natural(net, valid_loader)
     # acc = test_deepfool(net, valid_loader, device)
