@@ -69,7 +69,7 @@ def main():
     net.to(device)
 
     # net.load_for_testing(project_dir=args.project_dir)
-    net.load_for_testing(project_dir=args.project_dir, model_file='models/default_model_deepfool.pth')
+    net.load_for_testing(project_dir=args.project_dir, model_file='models/default_model.pth')
     
     # h2 = project_module.Net()
     # h2.to(device)

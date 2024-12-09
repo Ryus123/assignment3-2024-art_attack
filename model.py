@@ -11,7 +11,7 @@ import torch.utils.data
 import torchvision.transforms as transforms
 
 from utils_deepfool import deepfool_train_adversarial_model
-from utils_ADV import train_adversarial_model
+from utils_ADV import train_adversarial_fgsm, train_adversarial_pgd
 from utils_BAT import train_boosted_adversarial_model, test_BAT
 
 use_cuda = torch.cuda.is_available()
@@ -209,9 +209,9 @@ def main():
         train_loader = get_train_loader(cifar, valid_size, batch_size=batch_size)
         # train_model(net, train_loader, args.model_file, args.num_epochs)
 
-        deepfool_train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
+        # deepfool_train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
         
-        # train_adversarial_model(net, train_loader, args.model_file, args.num_epochs, device)
+        train_adversarial_fgsm(net, train_loader, args.model_file, args.num_epochs, device)
 
          
         print("Model save to '{}'.".format(args.model_file))
