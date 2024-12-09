@@ -59,7 +59,7 @@ def pgd_attack(model, loss_fn, images, labels, epsilon, alpha, num_iter, device)
     return images
 
 
-def train_adversarial_model(net, train_loader, pth_filename, num_epochs, device, train_on_both=True):
+def train_adversarial_pgd(net, train_loader, pth_filename, num_epochs, device, train_on_both=True):
     '''Adversarial training function'''
     print("Starting adversarial training")
     criterion = nn.NLLLoss()
@@ -74,6 +74,56 @@ def train_adversarial_model(net, train_loader, pth_filename, num_epochs, device,
 
             # Generate adversarial examples using the specified attack method
             images_adv = pgd_attack(net, criterion, images, labels, epsilon=0.1, alpha=0.01, num_iter=5, device=device)
+
+            if train_on_both:
+                # Combine clean and adversarial examples
+                images_combined = torch.cat((images, images_adv), 0)
+                labels_combined = torch.cat((labels, labels), 0)
+            else:
+                # Train only on adversarial examples
+                images_combined = images_adv
+                labels_combined = labels
+
+            # Zero the parameter gradients
+            optimizer.zero_grad()
+
+            # Forward pass
+            outputs = net(images_combined)
+            loss = criterion(outputs, labels_combined)
+
+            # Backward and optimize
+            loss.backward()
+            optimizer.step()
+
+
+            # print statistics
+            running_loss += loss.item()
+            if i % 500 == 499:    # print every 2000 mini-batches
+                print('[%d, %5d] loss: %.3f' %
+                      (epoch + 1, i + 1, running_loss / 2000))
+                running_loss = 0.0
+
+    # Save the trained model
+    torch.save(net.state_dict(), pth_filename)
+    print('Model saved in {}'.format(pth_filename))
+
+
+def train_adversarial_fgsm(net, train_loader, pth_filename, num_epochs, device, train_on_both=True):
+    '''Adversarial training function'''
+    print("Starting adversarial training")
+    criterion = nn.NLLLoss()
+    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+   
+    for epoch in range(num_epochs):
+        net.train()
+        running_loss = 0.0
+        for i, (images, labels) in enumerate(train_loader):
+            images = images.to(device)
+            labels = labels.to(device)
+
+
+            # Generate adversarial examples using the specified attack method
+            images_adv = fgsm_attack(net, criterion, images, labels, epsilon=0.1, device=device)
 
             if train_on_both:
                 # Combine clean and adversarial examples
