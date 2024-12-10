@@ -22,12 +22,12 @@ def train_boosted_adversarial_model(h1, h2, train_loader, pth_filename, num_epoc
         for i, (images, labels) in enumerate(train_loader):
             images = images.to(device)
             labels = labels.to(device)
-
+            # Generate adversarial data to train h2
             adversarial_data = pgd_attack(h1, criterion, images, labels, epsilon=0.1, alpha=0.01, num_iter=5, device=device)
             # zero the parameter gradients
             optimizer.zero_grad()
 
-            # forward + backward + optimize
+            # Classical train h2 with adversial data
             outputs = h2(adversarial_data)
             loss = criterion(outputs, labels)
             loss.backward()
@@ -57,6 +57,7 @@ def test_BAT(h1, h2, test_loader, device, alpha=0.2):
             # calculate e return the mixture constructed with those two classifiers
             outputs_h1 = h1(images)
             outputs_h2 = h2(images)
+            # Mix the both outputs
             outputs = (1-alpha)*outputs_h1 + alpha*outputs_h2
             # the class with the highest energy is what we choose as prediction
             _, predicted = torch.max(outputs.data, 1)
