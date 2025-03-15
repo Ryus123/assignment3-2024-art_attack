@@ -1,9 +1,7 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/57gOwgPd)
 This is a basic code repository for Assignment 3.
 
 The repository contains a basic model and a basic training and testing
-procedure. It will work on the testing-platform (but it will not
-perform well against adversarial examples). The goal of the project is
+procedure. It will work on the testing-platform. The goal of the project is
 to train a new model that is as robust as possible.
 
 # Basic usage
@@ -46,24 +44,3 @@ Even safer: do it from a different directory:
     $ mkdir tmp
     $ cd /tmp
     $ ../test_project.py ../
-
-# Modifying the project
-
-You can modify anything inside this git repository, it will work as long as:
-
-- it contains a `model.py` file in the root directory
-- the `model.py` file contains a class called `Net` derived from `torch.nn.Module`
-- the `Net` class has a function call `load_for_testing()` that initializes the model for testing (typically by setting the weights properly).  The default load_for_testing() loads and store weights from a model file, you will also need to make sure the repos contains a model file that can be loaded into the `Net` architecture using Net.load(model_file).
-- You may modify this `README.md` file. 
-
-# Before pushing
-
-When you have made improvements your version of the git repository:
-
-1. Add and commit every new/modified file to the git repository, including your model files in models/.(Check with `git status`) *DO NOT CHECK THE DATA IN PLEASE!!!!*
-2. Run `test_project.py` and verify the default model file used by load_for_testing() is the model file that you actually want to use for testing on the platform. 
-3. Push your last change
-
-Note: If you want to avoid any problems, it is a good idea to make a local copy of your repos (with `git clone <repos> <repos-copy>`) and to test the project inside this local copy.
-
-Good luck!
